@@ -1,36 +1,106 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
-
-## Getting Started
-
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Smart Contract
 ```
+// SPDX-License-Identifier: GPL-3.0
+pragma solidity >=0.4.22 <0.9.0;
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+contract Chess {
+    // 2D array representing the chessboard
+    int104[8][8] public board;
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+    // Define constants for pieces
+    int104 constant EMPTY = 0;
+    int104 constant PAWN = 1;
+    int104 constant ROOK = 2;
+    int104 constant KNIGHT = 3;
+    int104 constant BISHOP = 4;
+    int104 constant QUEEN = 5;
+    int104 constant KING = 6;
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+    // Negative values represent black pieces
+    // Positive values represent white pieces
 
-## Learn More
+    address public whitePlayer;
+    address public blackPlayer;
+    address public winner;
 
-To learn more about Next.js, take a look at the following resources:
+    constructor(address _whitePlayer, address _blackPlayer) {
+        whitePlayer = _whitePlayer;
+        blackPlayer = _blackPlayer;
+        initializeBoard();
+    }
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+    // Initialize the board with the correct setup
+    function initializeBoard() public {
+        // Pawns
+        for (uint8 i = 0; i < 8; i++) {
+            board[1][i] = PAWN; // White pawns
+            board[6][i] = -PAWN; // Black pawns
+        }
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+        // Rooks
+        board[0][0] = ROOK; board[0][7] = ROOK; // White rooks
+        board[7][0] = -ROOK; board[7][7] = -ROOK; // Black rooks
 
-## Deploy on Vercel
+        // Knights
+        board[0][1] = KNIGHT; board[0][6] = KNIGHT; // White knights
+        board[7][1] = -KNIGHT; board[7][6] = -KNIGHT; // Black knights
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+        // Bishops
+        board[0][2] = BISHOP; board[0][5] = BISHOP; // White bishops
+        board[7][2] = -BISHOP; board[7][5] = -BISHOP; // Black bishops
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+        // Queens
+        board[0][3] = QUEEN; // White queen
+        board[7][3] = -QUEEN; // Black queen
+
+        // Kings
+        board[0][4] = KING; // White king
+        board[7][4] = -KING; // Black king
+    }
+
+    // Move a piece from one position to another
+    function movePiece(
+        uint8 fromRow,
+        uint8 fromCol,
+        uint8 toRow,
+        uint8 toCol
+    ) public {
+        require(
+            msg.sender == whitePlayer || msg.sender == blackPlayer,
+            "Only players can move pieces"
+        );
+        require(
+            fromRow < 8 && fromCol < 8 && toRow < 8 && toCol < 8,
+            "Invalid board position"
+        );
+        require(board[fromRow][fromCol] != EMPTY, "No piece at the source position");
+
+        // Ensure only the correct player moves their pieces
+        if (msg.sender == whitePlayer) {
+            require(board[fromRow][fromCol] > 0, "You can only move your pieces");
+        } else {
+            require(board[fromRow][fromCol] < 0, "You can only move your pieces");
+        }
+
+        // Move the piece
+        board[toRow][toCol] = board[fromRow][fromCol];
+        board[fromRow][fromCol] = EMPTY;
+    }
+
+    // Define the winner based on a checkmate
+    function declareWinner(address _winner) public {
+        require(
+            msg.sender == whitePlayer || msg.sender == blackPlayer,
+            "Only players can declare a winner"
+        );
+        require(winner == address(0), "Winner already declared");
+        winner = _winner;
+    }
+
+    // Get the board state at a specific position
+    function getPiece(uint8 row, uint8 col) public view returns (int104) {
+        require(row < 8 && col < 8, "Invalid board position");
+        return board[row][col];
+    }
+}
+```
