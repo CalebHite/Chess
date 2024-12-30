@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { getContract, connectWallet, deployChessContract, getBoard } from './web3';
+import { getContract, connectWallet, deployChessContract, getBoard, movePiece, getPiece } from './web3';
 
 export default function Home() {
   const [player1, setPlayer1] = useState(null);
@@ -17,10 +17,36 @@ export default function Home() {
     setPlayer2(wallet);
   }
 
-  async function startGame(){
-    const contract = await getContract();
-    await deployChessContract(player1, player2);
-    setGameStarted(true);
+  async function startGame() {
+    try {
+      const tx = await deployChessContract(player1, player2);
+      console.log("Deployment transaction:", tx);
+      
+      // Wait for the transaction to be mined
+      await tx.deployTransaction.wait(2);
+      
+      setGameStarted(true);
+      
+      // Add delay before getting board state
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      const board = await getBoard();
+      setBoard(board);
+    } catch (error) {
+      console.error("Error starting game:", error);
+      // Handle the error appropriately in your UI
+      alert("Failed to start game. Please try again.");
+    }
+  }
+
+  async function makeMove(fromRow, fromCol, toRow, toCol){
+    if (getPiece(toRow, toCol) == KING){
+      declareWinner(player1);
+    }
+    if (getPiece(toRow, toCol) == -KING){
+      declareWinner(player2);
+    }
+    await movePiece(fromRow, fromCol, toRow, toCol);
     const board = await getBoard();
     setBoard(board);
   }
